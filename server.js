@@ -1,8 +1,23 @@
 import * as dotenv from 'dotenv'
+import express from 'express'
+import cors from 'cors'
+import morgan from 'morgan'
 import { OpenAI } from "openai"
 
-
 dotenv.config()
+const app = express();
+const PORT = process.env.PORT
+
+// Enable CORS for your front-end
+const corsOptions = {
+    origin: "http://127.0.0.1:5500",
+}
+
+app.use(cors(corsOptions))
+app.use(express.json())
+app.use(morgan("dev"))
+
+
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -78,7 +93,7 @@ const retrieveRun = async () => {
   retrieveRun();
 }
 
-main()
+// main() 
 
 // run assistent with thread and run ids
 // const run = await openai.beta.threads.runs.retrieve(
@@ -91,3 +106,6 @@ main()
 // const messages = await openai.beta.threads.messages.list(
 //     'thread_ft4hn5dwKAs8oczmrWQCQj9C', // should be fetched from the database
 // )
+app.listen(PORT, () => {
+    console.log(`listening on port ${PORT}`)
+})

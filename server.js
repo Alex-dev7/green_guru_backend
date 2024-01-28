@@ -3,6 +3,11 @@ import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
 import { OpenAI } from "openai"
+import multer from 'multer'
+import fs from 'fs'
+const upload = multer({dest: 'uploads/'})
+let fileIds = []; // Store file IDs
+let uploadedFileIds = []; // Store uploaded file IDs
 
 dotenv.config()
 const app = express();
@@ -27,10 +32,12 @@ const openai = new OpenAI({
 const threadByUser = {}; // Store thread IDs by user
 
 
+app.get('/', (req, res) => {
+  res.send("Welcome to Contract Wizard!")
+})
 
 
-
-app.post('/chat', async (req, res) => {
+app.post('/chat',upload.single('file'), async (req, res) => {
   const assistant  = await openai.beta.assistants.retrieve(
     "asst_u6WHvnopqDA4y3IFvhpiGzTh"
 )
@@ -57,7 +64,8 @@ console.log(req.body.message)
       threadByUser[userId], // Use the stored thread ID for this user
       {
         role: "user",
-        content: userMessage,
+        content: "review this file",
+        file_ids: [req.file],
       }
     );
     console.log("This is the message object: ", myThreadMessage, "\n");
@@ -123,7 +131,33 @@ console.log(req.body.message)
 // ----------------------------------------------------------------
 
 
+app.post('/upload', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
 
+  try {
+    const fileStream = fs.createReadStream(req.file.path);
+
+    // Upload the file to OpenAI
+    const openaiFile = await openai.files.create({
+      file: fileStream,
+      purpose: 'assistants', // or 'assistants' depending on your use case
+    });
+
+    // Store the uploaded file ID for later use
+    uploadedFileIds.push(openaiFile.id);
+
+    res.json({ message: 'File uploaded successfully', fileId: openaiFile.id });
+    console.log(fileIds)
+    console.log("test" + uploadedFileIds)
+  } catch (error) {
+    console.error('Error uploading file to OpenAI:', error);
+    res.status(500).send('Error processing file.');
+  } finally {
+    fs.unlinkSync(req.file.path); // Clean up the local file
+  }
+});
 
 
 

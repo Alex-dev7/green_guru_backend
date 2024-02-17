@@ -1,13 +1,11 @@
 import * as dotenv from 'dotenv'
 import { OpenAI } from "openai"
 import express from 'express'
-import path from 'path'
 import morgan from 'morgan'
 import multer from 'multer'
 import cors from 'cors'
 import fs from 'fs'
 dotenv.config()
-// const { OPENAI_API_KEY, PORT } = process.env
 
 
 // Setup Express
@@ -15,24 +13,7 @@ const app = express();
 app.use(express.json())
 app.use(cors());
 app.use(morgan("dev"));
-// app.use(express.urlencoded({ extended: true }));
 const upload = multer({dest: 'uploads/'})
-// app.use(multer({dest: 'uploads/'}).any());
-
-
-
-// // Set up storage for uploaded files
-// const storage = multer.diskStorage({
-//     destination: (req, file, cb) => {
-//       cb(null, 'uploads/');
-//     },
-//     filename: (req, file, cb) => {
-//       cb(null, Date.now() + '-' + file.originalname);
-//     }
-//   });
-  
-//   // Create the multer instance
-//   const upload = multer({ storage: storage });
 
 
 
@@ -74,11 +55,21 @@ async function addMessage(threadId, message, upload_file) {
         threadId,
         {
             role: "user",
-            content: message || "review this contract",
+            content: file.id + " " + message,
             file_ids: [file.id]
         }
     );
     console.log(response)
+
+    // Delete the file after it has been sent
+    fs.unlink(upload_file, (err) => {
+        if (err) {
+            console.error('There was an error deleting the file:', err);
+        } else {
+            console.log('File deleted successfully');
+        }
+    });
+
     return response;
 }
 
@@ -128,11 +119,16 @@ async function checkingStatus(res, threadId, runId) {
         });
 
         res.json({ messages });
+        deleteThread(threadId);
     }
+
 }
 
-
-
+// Delete the thread after it has been used beceause at the moment we are not storing the threadId in a database
+async function deleteThread(threadId) {
+    const deletedThread = await openai.beta.threads.del(threadId);
+    console.log("Deleted thread object " + deletedThread)
+}
 
 
 
@@ -154,9 +150,8 @@ app.get('/thread', (req, res) => {
 // Route for adding a message
 app.post('/message', upload.single('file'),  (req, res) => {
     const { message, threadId } = req.body;
-    console.log(req.body, "   REQUEST BODY ______")
     const reqFile = req.file ? req.file.path : null;
-    // console.log(reqFile)
+
     addMessage(threadId, message, reqFile).then(message => {
         // Run the assistant
         runAssistant(threadId).then(run => {
@@ -175,7 +170,7 @@ app.post('/message', upload.single('file'),  (req, res) => {
 
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

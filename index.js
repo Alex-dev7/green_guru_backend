@@ -147,6 +147,10 @@ async function getMessages(threadId, res) {
 
 // --------------------- ROUTES --------------------- //
 
+// home route
+app.get('/', (req, res) => {
+  res.json('Green Guru is here!');
+})
 
 
 // route for creating a new thread

@@ -8,14 +8,14 @@ import fs from 'fs'
 dotenv.config()
 
 const corsOptions = {
-    origin: 'https://chat-bot-red-phi.vercel.app/',
+    origin: 'https://chat-bot-red-phi.vercel.app',
     optionsSuccessStatus: 200 
   }
   
 // Setup Express
 const app = express();
 app.use(express.json())
-app.use(cors('*'));
+app.use(cors(corsOptions));
 app.use(morgan("dev"));
 
 // uncoment this if you want to store the files

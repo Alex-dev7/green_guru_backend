@@ -8,7 +8,7 @@ import fs from 'fs'
 dotenv.config()
 
 const corsOptions = {
-    origin: 'https://chat-bot-red-phi.vercel.app',
+    origin: 'https://chat-bot-red-phi.vercel.app/',
     optionsSuccessStatus: 200 
   }
   
@@ -197,7 +197,7 @@ app.post('/message',  (req, res) => {
 
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

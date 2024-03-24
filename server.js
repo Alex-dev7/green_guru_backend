@@ -13,7 +13,9 @@ const app = express();
 app.use(express.json())
 app.use(cors());
 app.use(morgan("dev"));
-const upload = multer({dest: 'uploads/'})
+
+// uncoment this if you want to store the files
+// const upload = multer({dest: 'uploads/'})
 
 
 
@@ -21,7 +23,6 @@ const upload = multer({dest: 'uploads/'})
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 })
-
 
 
 
@@ -43,32 +44,32 @@ async function createThread() {
 
 
 // Adding message
-async function addMessage(threadId, message, upload_file) {
+async function addMessage(threadId, message) {
     console.log('Adding a new message to thread: ' + threadId);
-    
-    const file = await openai.files.create({
-        file: fs.createReadStream(upload_file),
-        purpose: "assistants",
-      });
+
+    // If there is a file, we have to upload it first
+    // const file = await openai.files.create({
+    //     file: fs.createReadStream(upload_file),
+    //     purpose: "assistants",
+    //   });
 
     const response = await openai.beta.threads.messages.create(
         threadId,
         {
             role: "user",
-            content: file.id + " " + message,
-            file_ids: [file.id]
+            content: message,
         }
     );
     console.log(response)
 
     // Delete the file after it has been sent
-    fs.unlink(upload_file, (err) => {
-        if (err) {
-            console.error('There was an error deleting the file:', err);
-        } else {
-            console.log('File deleted successfully');
-        }
-    });
+    // fs.unlink(upload_file, (err) => {
+    //     if (err) {
+    //         console.error('There was an error deleting the file:', err);
+    //     } else {
+    //         console.log('File deleted successfully');
+    //     }
+    // });
 
     return response;
 }
@@ -119,7 +120,7 @@ async function checkingStatus(res, threadId, runId) {
         });
 
         res.json({ messages });
-        deleteThread(threadId);
+        // deleteThread(threadId);
     }
 
 }
@@ -131,9 +132,21 @@ async function deleteThread(threadId) {
 }
 
 
+// Get all messages
+async function getMessages(threadId, res) {
+    const messagesList = await openai.beta.threads.messages.list(threadId);
+    let messages = []
+    console.log("Retrieving messages from thread: " + threadId)
+    messagesList.body.data.forEach(message => {
+        messages.push(message.content);
+    });
+
+    res.json({ messages });
+}
 
 
 // --------------------- ROUTES --------------------- //
+
 
 
 // route for creating a new thread
@@ -146,13 +159,19 @@ app.get('/thread', (req, res) => {
 })
 
 
+// Route for getting all messages
+app.get('/list/:localStorageId', (req, res) => {
+    const { localStorageId } = req.params;
+    getMessages(localStorageId, res);
+})
+
+
 
 // Route for adding a message
-app.post('/message', upload.single('file'),  (req, res) => {
+app.post('/message',  (req, res) => {
     const { message, threadId } = req.body;
-    const reqFile = req.file ? req.file.path : null;
-
-    addMessage(threadId, message, reqFile).then(message => {
+    console.log('Message: ' + message);
+    addMessage(threadId, message).then(message => {
         // Run the assistant
         runAssistant(threadId).then(run => {
             const runId = run.id;           

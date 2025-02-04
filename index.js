@@ -30,6 +30,7 @@ const openai = new OpenAI({
 
 
 
+
 // Retrieve assistant
 const assistant  = await openai.beta.assistants.retrieve(
     process.env.ASSISTANT_ID
@@ -178,7 +179,7 @@ app.get('/list/:localStorageId', (req, res) => {
 // Route for adding a message
 app.post('/message',  (req, res) => {
     const { message, threadId } = req.body;
-    console.log('Message: ' + message);
+    console.log(req.body);
     addMessage(threadId, message).then(message => {
         // Run the assistant
         runAssistant(threadId).then(run => {
